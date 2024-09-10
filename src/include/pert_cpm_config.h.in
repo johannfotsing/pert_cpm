@@ -1,0 +1,3 @@
+// the configured options and settings for pert_cpm
+#define pert_cpm_VERSION_MAJOR @pert_cpm_VERSION_MAJOR@
+#define pert_cpm_VERSION_MINOR @pert_cpm_VERSION_MINOR@
