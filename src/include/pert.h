@@ -81,7 +81,10 @@ namespace pert
     template<typename EventIDType>
     bool operator<(const activity_t<EventIDType>& a1, const activity_t<EventIDType>& a2)
     {
-        return a1.trigger_event < a2.trigger_event or a1.completion_event < a2.completion_event;
+        if(a1.trigger_event != a2.trigger_event)
+            return a1.trigger_event < a2.trigger_event;
+        
+        return a1.completion_event < a2.completion_event;
     }
 
     template<typename EventIDType>
@@ -101,20 +104,25 @@ namespace pert
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const activity_t<EventIDType>& an_activity, const network_t<EventIDType, DurationType>::duration& a_duration)
+    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const activity_t<EventIDType>& an_activity, const DurationType& a_duration)
     {
         // no two activities can directly connect two events
         auto search = __data.find(an_activity.reverse());
         if (search != __data.end())
+        {
+            // DEBUG
+            std::cout << "Reverse present: " << an_activity.trigger_event << " ---> " << an_activity.completion_event << std::endl;
             return *this;
+        }
 
-        std::pair<activity_t<EventIDType>, DurationType> pair = std::make_pair(an_activity, a_duration);
-        __data.insert(pair);
+        // auto pair = std::make_pair(an_activity, a_duration);
+        __data.insert({an_activity, a_duration});
+
         return *this;
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event, const network_t<EventIDType, DurationType>::duration& a_duration)
+    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event, const DurationType& a_duration)
     {
         return add_activity(activity_t<EventIDType>(a_trigger_event, a_completion_event), a_duration);
     }
@@ -135,13 +143,18 @@ namespace pert
     template<typename EventIDType, typename DurationType>
     DurationType network_t<EventIDType, DurationType>::estimated_duration(const activity_t<EventIDType>& an_activity) const
     {
+        // DEBUG ?
+        auto search_activity = __data.find(an_activity);
+        if (search_activity == __data.end())
+            return -1;
+
         return __data.at(an_activity);
     }
 
     template<typename EventIDType, typename DurationType>
-    void network_t<EventIDType, DurationType>::set_estimated_duration(const activity_t<EventIDType>& an_activity, const network_t<EventIDType, DurationType>::duration& a_duration)
+    void network_t<EventIDType, DurationType>::set_estimated_duration(const activity_t<EventIDType>& an_activity, const DurationType& a_duration)
     {
-        __data.at(an_activity) = a_duration;
+        __data[an_activity] = a_duration;
     }
 
     template<typename EventIDType, typename DurationType>
@@ -308,36 +321,22 @@ namespace pert
     template<typename EventIDType, typename DurationType>
     network_t<EventIDType, DurationType> network_t<EventIDType, DurationType>::from_txt(const std::string& txt)
     {
-        // Split text into lines
-        std::vector<std::string> lines;
-        std::string _token;
+        network_t<EventIDType, DurationType> txt_network;
+         
+        // Split text into lines and lines into event event duration
+        std::string _line;
         char delimiter = '\n';
-        while (std::getline(std::stringstream(txt), _token, delimiter))
+        std::stringstream txt_stream(txt);
+        while (std::getline(txt_stream, _line, delimiter))
         {
-            std::cout << _token << std::endl;
-            lines.push_back(_token);
-        }
-
-        // Split lines into event event duration and add to network
-        network_t<EventIDType, DurationType> network;
-        for (const std::string& line: lines)
-        {
-            std::vector<std::string> tokens;
-            char delimiter = ' ';
-            while ((std::getline(std::stringstream(line), _token, delimiter)))
-            {
-                tokens.push_back(_token);
-            }
-
             EventIDType s, f;
             DurationType d;
-            std::stringstream(tokens[0]) >> s;
-            std::stringstream(tokens[1]) >> f;
-            std::stringstream(tokens[2]) >> d;
-            network.add_activity(s, f, d);
+            std::stringstream _line_stream(_line);
+            _line_stream >> s >> f >> d;
+            txt_network.add_activity(s, f, d);
         }
 
-        return network;
+        return txt_network;
     };
 
 } // namespace pert
