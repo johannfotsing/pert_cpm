@@ -77,31 +77,36 @@ int test_from_txt(const char* file_name)
 
 int test_basic(const network& a_network)
 {
-    // List activities
-    for (const auto& a: a_network.activities())
-    {
-        std::cout << a.trigger_event << "--->" << a.completion_event << "  : " << a_network.estimated_duration(a) << std::endl;
-    }
-    // List initial events
+    // Network display section
+    std::cout << "\n* Network\n----------" << std::endl;
     std::cout << "Initial events: ";
     for (const auto& e: a_network.initial_events())
     {
         std::cout << e << " ";
     }
     std::cout << std::endl;
-    // List terminal events
     std::cout << "Terminal events: ";
     for (const auto& e: a_network.terminal_events())
     {
         std::cout << e << " ";
     }
     std::cout << std::endl;
-    // Is well formed ?
     std::cout << "Well formed: " << a_network.is_well_formed() << std::endl;
-    // Earliest finish
+    std::cout << "----------" << std::endl;
+    // List activities
+    for (const auto& a: a_network.activities())
+    {
+        std::cout << a.trigger_event << "--->" << a.completion_event << "  : " << a_network.estimated_duration(a) << std::endl;
+    }
+    std::cout << std::endl;
+
+    // Schedule section
+    std::cout << "* Schedule\n----------" << std::endl;
+    std::cout << "Initial time: " << a_network.initial_time() << std::endl;
+    std::cout << "Terminal time: " << a_network.terminal_time() << std::endl;
     std::cout << "Earliest finish: " << a_network.earliest_occurence(*a_network.terminal_events().begin()) << std::endl;
-    // Latest start
     std::cout << "Latest start: " << a_network.latest_occurence(*a_network.initial_events().begin()) << std::endl;
+    std::cout << std::endl;
 
     return 0;
 }

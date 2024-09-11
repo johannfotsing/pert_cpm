@@ -52,6 +52,8 @@ namespace pert
         std::set<event> terminal_events() const;
         // schedule
         void schedule(const duration&, const duration&);
+        duration initial_time() const;
+        duration terminal_time() const;
         duration activity_float(const activity&) const;
         duration free_float(const activity&) const;
         duration interfering_float(const activity&) const;
@@ -241,6 +243,18 @@ namespace pert
     };
 
     template<typename EventIDType, typename DurationType>
+    DurationType network_t<EventIDType, DurationType>::initial_time() const
+    {
+        return __initial_time;
+    }
+
+    template<typename EventIDType, typename DurationType>
+    DurationType network_t<EventIDType, DurationType>::terminal_time() const
+    {
+        return __terminal_time;
+    }
+
+    template<typename EventIDType, typename DurationType>
     DurationType network_t<EventIDType, DurationType>::activity_float(const activity_t<EventIDType>& an_activity) const
     {
         return earliest_occurence(an_activity.completion_event) - earliest_finish(an_activity);
@@ -327,6 +341,15 @@ namespace pert
         std::string _line;
         char delimiter = '\n';
         std::stringstream txt_stream(txt);
+        // Get schedule times
+        DurationType _initial_time;
+        DurationType _terminal_time;
+        std::getline(txt_stream, _line, delimiter);
+        std::stringstream(_line) >> _initial_time;
+        std::getline(txt_stream, _line, delimiter);
+        std::stringstream(_line) >> _terminal_time;
+        txt_network.schedule(_initial_time, _terminal_time);
+        // Get activities
         while (std::getline(txt_stream, _line, delimiter))
         {
             EventIDType s, f;
