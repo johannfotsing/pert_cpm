@@ -9,5 +9,5 @@
 
 int main(int argc, char** argv)
 {
-    return test_from_txt(argv[1]);
+    return test_interactive(argv[1]);
 }

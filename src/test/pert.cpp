@@ -53,21 +53,20 @@ int test_from_txt(const char* file_name)
     std::string file_str((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
     input_file.close();
     network test_network = network::from_txt(file_str);
-    test_network.schedule(0, 21);
     return test_basic(test_network);
 }
 
-int test_basic(const network& a_network)
+void show_network(const network& a_network)
 {
     // Network display section
     std::cout << "\n* Network\n----------" << std::endl;
-    std::cout << "Initial events: ";
+    std::cout << "Initial event(s): ";
     for (const auto& e: a_network.initial_events())
     {
         std::cout << e << " ";
     }
     std::cout << std::endl;
-    std::cout << "Terminal events: ";
+    std::cout << "Terminal event(s): ";
     for (const auto& e: a_network.terminal_events())
     {
         std::cout << e << " ";
@@ -81,6 +80,11 @@ int test_basic(const network& a_network)
         std::cout << a.trigger_event << "--->" << a.completion_event << "  : " << a_network.estimated_duration(a) << std::endl;
     }
     std::cout << std::endl;
+}
+
+int test_basic(const network& a_network)
+{
+    show_network(a_network);
 
     // Schedule section
     std::cout << "* Schedule\n----------" << std::endl;
@@ -90,5 +94,101 @@ int test_basic(const network& a_network)
     std::cout << "Latest start: " << a_network.latest_occurence(*a_network.initial_events().begin()) << std::endl;
     std::cout << std::endl;
 
+    return 0;
+}
+
+int test_interactive(const char* network_file)
+{
+    // from txt network
+    std::ifstream input_file(network_file);
+    std::string file_str((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+    input_file.close();
+    network test_network = network::from_txt(file_str);
+
+    show_network(test_network);
+
+    // Interactive loop
+    std::string network_command, pars;
+    while (network_command != "q")
+    {
+        // read input command
+        std::cin >> network_command;
+
+        // Quit if user requested
+        if (network_command == "q")
+            continue;
+
+        // Parse user command and execute network command
+        if (network_command == "earliest_occurence_of")
+        {
+            network::event e;
+            std::cin >> pars;
+            std::stringstream(pars) >> e;
+            std::cout << "Earliest occurence of event " << e << ": " << test_network.earliest_occurence(e) << std::endl;
+        }
+        else if(network_command == "latest_occurence_of")
+        {
+            network::event e;
+            std::cin >> pars;
+            std::stringstream(pars) >> e;
+            std::cout << "Latest occurence of event " << e << ": " << test_network.latest_occurence(e) << std::endl;
+        }
+        else if(network_command == "earliest_finish_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << "Earliest finish of activity " << e_start << " ---> " << e_finish << ": " << test_network.earliest_finish(network::activity(e_start, e_finish)) << std::endl;
+        }
+        else if(network_command == "latest_start_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << "Latest start of activity " << e_start << " ---> " << e_finish << ": " << test_network.latest_start(network::activity(e_start, e_finish)) << std::endl;
+        }
+        else if(network_command == "activity_float_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << test_network.activity_float(network::activity(e_start, e_finish)) << std::endl;
+        }
+        else if(network_command == "free_float_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << test_network.free_float(network::activity(e_start, e_finish)) << std::endl;
+        }
+        else if(network_command == "interfering_float_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << test_network.interfering_float(network::activity(e_start, e_finish)) << std::endl;
+        }
+        else if(network_command == "independent_float_of")
+        {
+            network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            std::cout << test_network.independent_float(network::activity(e_start, e_finish)) << std::endl;
+        }
+        std::cout << std::endl;
+    }
+    
     return 0;
 }

@@ -24,3 +24,4 @@ using network = network_t<int, int>;
 int test_basic(const network&);
 int test_from_dummy();
 int test_from_txt(const char*);
+int test_interactive(const char*);
