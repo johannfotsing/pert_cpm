@@ -10,7 +10,6 @@
 #include <fstream>
 #include <sstream>
 #include <streambuf>
-#include "../depends/rapidxml-1.13/rapidxml.hpp"
 
 int test_from_dummy()
 {
