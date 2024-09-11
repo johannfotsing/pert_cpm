@@ -22,26 +22,57 @@ using network = network_t<int, int>;
 
 // Test functions
 int test_basic(const network&);
+int test_from_dummy();
+int test_from_txt(const char*);
 
 int main(int argc, char** argv)
+{   
+    return test_from_txt(argv[1]);
+}
+
+int test_from_dummy()
 {
     network test_network;
 
     // Dummy network
-    /*test_network.add_activity(1, 3, 3)
-        .add_activity(1, 2, 1)
-        .add_activity(2, 4, 1)
-        .add_activity(3, 4, 6)
-        .schedule(0, 9);*/
-
-    // from txt network
-    std::ifstream input_file(argv[1]);
-    std::string file_str((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
-    input_file.close();
-    test_network = network::from_txt(file_str);
+    /*
+    1--->2  : 2
+    1--->4  : 2
+    1--->7  : 1
+    2--->3  : 4
+    4--->5  : 5
+    3--->6  : 1
+    4--->8  : 8
+    5--->6  : 4
+    7--->8  : 3
+    6--->9  : 3
+    8--->9  : 5
+    */
+    test_network.add_activity(1, 2, 2)
+        .add_activity(1, 4, 2)
+        .add_activity(1, 7, 1)
+        .add_activity(2, 3, 4)
+        .add_activity(4, 5, 5)
+        .add_activity(3, 6, 1)
+        .add_activity(4, 8, 8)
+        .add_activity(5, 6, 4)
+        .add_activity(7, 8, 3)
+        .add_activity(6, 9, 3)
+        .add_activity(8, 9, 5)
+        .schedule(0, 21);
 
     return test_basic(test_network);
-    
+}
+
+int test_from_txt(const char* file_name)
+{
+    // from txt network
+    std::ifstream input_file(file_name);
+    std::string file_str((std::istreambuf_iterator<char>(input_file)), std::istreambuf_iterator<char>());
+    input_file.close();
+    network test_network = network::from_txt(file_str);
+    test_network.schedule(0, 21);
+    return test_basic(test_network);
 }
 
 int test_basic(const network& a_network)
@@ -68,9 +99,9 @@ int test_basic(const network& a_network)
     // Is well formed ?
     std::cout << "Well formed: " << a_network.is_well_formed() << std::endl;
     // Earliest finish
-    std::cout << "Earliest finish: " << a_network.earliest_occurence(4) << std::endl;
+    std::cout << "Earliest finish: " << a_network.earliest_occurence(*a_network.terminal_events().begin()) << std::endl;
     // Latest start
-    std::cout << "Latest start: " << a_network.latest_occurence(1) << std::endl;
+    std::cout << "Latest start: " << a_network.latest_occurence(*a_network.initial_events().begin()) << std::endl;
 
     return 0;
 }
