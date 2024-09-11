@@ -6,7 +6,7 @@ project(pert_cpm VERSION 0.1)
 add_subdirectory(src)
 
 # add the executable
-add_executable(pert_cpm src/test/driver.cpp src/test/pert.cpp)
+add_executable(pert_cpm src/test/pert.cpp)
 
 # list of path to search for include files
 target_include_directories(pert_cpm PUBLIC ${PROJECT_BINARY_DIR}/../src/include)

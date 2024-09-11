@@ -6,10 +6,15 @@
  */
 
 #include <iostream>
-#include "../include/test/pert.h"
 #include <fstream>
 #include <sstream>
 #include <streambuf>
+#include <test/pert.h>
+
+int main(int argc, char** argv)
+{
+    return test_interactive(argv[1]);
+}
 
 int test_from_dummy()
 {
