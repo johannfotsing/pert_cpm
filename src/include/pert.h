@@ -19,26 +19,48 @@
 namespace pert
 {
 
-    template<typename EventIDType>
-    struct activity_t
-    {
-        EventIDType trigger_event;
-        EventIDType completion_event;
-        activity_t(EventIDType a_trigger_event, EventIDType a_completion_event) : trigger_event(a_trigger_event), completion_event(a_completion_event) {}
-        bool precedes(const EventIDType& e) const { return completion_event == e; }
-        bool follows(const EventIDType& e) const { return trigger_event == e; }
-        activity_t<EventIDType> reverse() const { return activity_t<EventIDType>(completion_event, trigger_event); }
-    };
+    //template<typename EventIDType>
 
     template<typename EventIDType, typename DurationType>
-    class network_t
+    class network
     {
     public:
-        using activity = activity_t<EventIDType>;
-        using network = network_t<EventIDType, DurationType>;
+        // activity
+        class activity
+        {
+        public:
+            activity(EventIDType a_trigger_event, EventIDType a_completion_event) : __trigger_event(a_trigger_event), __completion_event(a_completion_event) {}
+            bool precedes(const EventIDType& e) const { return __completion_event == e; }
+            bool follows(const EventIDType& e) const { return __trigger_event == e; }
+            EventIDType trigger_event() const { return __trigger_event; }
+            EventIDType completion_event() const { return __completion_event; }
+            activity reverse() const { return activity(__completion_event, __trigger_event); }
+            bool operator<(const activity& a) const
+            {
+                if (__trigger_event == a.__trigger_event)
+                    return __completion_event < a.__completion_event;
+                
+                return __trigger_event < a.__trigger_event;
+            };
+            bool operator==(const activity& a) const
+            {
+                
+                return __trigger_event == a.__trigger_event and __completion_event == a.__completion_event;
+            };
+        private:
+            EventIDType __trigger_event;
+            EventIDType __completion_event;
+        };
+        // schedule
+        struct schedule
+        {
+            DurationType initial_time;
+            DurationType terminal_time;
+            schedule(DurationType an_initial_time, DurationType a_terminal_time) : initial_time(an_initial_time), terminal_time(a_terminal_time) {}
+        };
         using event = EventIDType;
         using duration = DurationType;
-
+        using segment = std::pair<activity, duration>;
     public:
         std::set<activity> activities() const;
         network& add_activity(const event&, const event&, const duration&);
@@ -65,7 +87,7 @@ namespace pert
         duration latest_occurence(const event&) const;
         duration latest_start(const activity&) const;
         // critical path
-        std::vector<std::pair<activity, duration>> find_critical_path() const;
+        std::vector<segment> find_critical_path() const;
         // automation
         static network from_txt(const std::string &);
         
@@ -82,25 +104,22 @@ namespace pert
         duration __terminal_time;
     };
 
-    template<typename EventIDType>
-    bool operator<(const activity_t<EventIDType>& a1, const activity_t<EventIDType>& a2)
+    template<typename EventIDType, typename DurationType>
+    bool operator<(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
-        if(a1.trigger_event != a2.trigger_event)
-            return a1.trigger_event < a2.trigger_event;
-        
-        return a1.completion_event < a2.completion_event;
-    }
-
-    template<typename EventIDType>
-    bool operator==(const activity_t<EventIDType>& a1, const activity_t<EventIDType>& a2)
-    {
-        return a1.trigger_event == a2.trigger_event and a1.completion_event == a2.completion_event;
+        return a1 < a2;
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<activity_t<EventIDType>> network_t<EventIDType, DurationType>::activities() const
+    bool operator==(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
-        std::set<activity_t<EventIDType>> _activities;
+        return a1 == a2;
+    }
+
+    template<typename EventIDType, typename DurationType>
+    std::set<typename network<EventIDType, DurationType>::activity> network<EventIDType, DurationType>::activities() const
+    {
+        std::set<typename network<EventIDType, DurationType>::activity> _activities;
         for (const auto& a: __data)
             _activities.emplace(a.first);
 
@@ -108,44 +127,43 @@ namespace pert
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const activity_t<EventIDType>& an_activity, const DurationType& a_duration)
+    network<EventIDType, DurationType>& network<EventIDType, DurationType>::add_activity(const typename network<EventIDType, DurationType>::activity& an_activity, const DurationType& a_duration)
     {
         // no two activities can directly connect two events
         auto search = __data.find(an_activity.reverse());
         if (search != __data.end())
         {
             // DEBUG
-            std::cout << "Reverse present: " << an_activity.trigger_event << " ---> " << an_activity.completion_event << std::endl;
+            std::cout << "Reverse present: " << an_activity.trigger_event() << " ---> " << an_activity.completion_event() << std::endl;
             return *this;
         }
 
-        // auto pair = std::make_pair(an_activity, a_duration);
         __data.insert({an_activity, a_duration});
 
         return *this;
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::add_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event, const DurationType& a_duration)
+    network<EventIDType, DurationType>& network<EventIDType, DurationType>::add_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event, const DurationType& a_duration)
     {
-        return add_activity(activity_t<EventIDType>(a_trigger_event, a_completion_event), a_duration);
+        return add_activity(network<EventIDType, DurationType>::activity(a_trigger_event, a_completion_event), a_duration);
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::delete_activity(const activity_t<EventIDType>& an_activity)
+    network<EventIDType, DurationType>& network<EventIDType, DurationType>::delete_activity(const network<EventIDType, DurationType>::activity& an_activity)
     {
         __data.erase(an_activity);
         return *this;
     }
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType>& network_t<EventIDType, DurationType>::delete_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event)
+    network<EventIDType, DurationType>& network<EventIDType, DurationType>::delete_activity(const EventIDType& a_trigger_event, const EventIDType& a_completion_event)
     {
-        return delete_activity(activity_t<EventIDType>(a_trigger_event, a_completion_event));
+        return delete_activity(network<EventIDType, DurationType>::activity(a_trigger_event, a_completion_event));
     }
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::estimated_duration(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::estimated_duration(const network<EventIDType, DurationType>::activity& an_activity) const
     {
         // DEBUG ?
         auto search_activity = __data.find(an_activity);
@@ -156,37 +174,37 @@ namespace pert
     }
 
     template<typename EventIDType, typename DurationType>
-    void network_t<EventIDType, DurationType>::set_estimated_duration(const activity_t<EventIDType>& an_activity, const DurationType& a_duration)
+    void network<EventIDType, DurationType>::set_estimated_duration(const network<EventIDType, DurationType>::activity& an_activity, const DurationType& a_duration)
     {
         __data[an_activity] = a_duration;
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<activity_t<EventIDType>> network_t<EventIDType, DurationType>::incoming_activities(const EventIDType& an_event) const
+    std::set<typename network<EventIDType, DurationType>::activity> network<EventIDType, DurationType>::incoming_activities(const EventIDType& an_event) const
     {
         auto _activities = activities();
-        std::set<activity_t<EventIDType>> _incoming_activities;
-        std::copy_if(_activities.cbegin(), _activities.cend(), std::inserter(_incoming_activities, _incoming_activities.end()), [an_event](const activity_t<EventIDType>& a){ return a.precedes(an_event); });
+        std::set<network<EventIDType, DurationType>::activity> _incoming_activities;
+        std::copy_if(_activities.cbegin(), _activities.cend(), std::inserter(_incoming_activities, _incoming_activities.end()), [an_event](const typename network<EventIDType, DurationType>::activity& a){ return a.precedes(an_event); });
         return _incoming_activities;
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<activity_t<EventIDType>> network_t<EventIDType, DurationType>::outgoing_activities(const EventIDType& an_event) const
+    std::set<typename network<EventIDType, DurationType>::activity> network<EventIDType, DurationType>::outgoing_activities(const EventIDType& an_event) const
     {
         auto _activities = activities();
-        std::set<activity_t<EventIDType>> _outgoing_activities;
-        std::copy_if(_activities.cbegin(), _activities.cend(), std::inserter(_outgoing_activities, _outgoing_activities.end()), [an_event](const activity_t<EventIDType>& a){ return a.follows(an_event); });
+        std::set<typename network<EventIDType, DurationType>::activity> _outgoing_activities;
+        std::copy_if(_activities.cbegin(), _activities.cend(), std::inserter(_outgoing_activities, _outgoing_activities.end()), [an_event](const typename network<EventIDType, DurationType>::activity& a){ return a.follows(an_event); });
         return _outgoing_activities;
     }
 
     template<typename EventIDType, typename DurationType>
-    bool network_t<EventIDType, DurationType>::is_well_formed() const
+    bool network<EventIDType, DurationType>::is_well_formed() const
     {
         return initial_events().size() == 1 and terminal_events().size() == 1;
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<EventIDType> network_t<EventIDType, DurationType>::initial_events() const
+    std::set<EventIDType> network<EventIDType, DurationType>::initial_events() const
     {
         std::set<EventIDType> _initial_events;
         auto _trigger_events = trigger_events();
@@ -200,7 +218,7 @@ namespace pert
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<EventIDType> network_t<EventIDType, DurationType>::terminal_events() const
+    std::set<EventIDType> network<EventIDType, DurationType>::terminal_events() const
     {
         std::set<EventIDType> _terminal_events;
         auto _trigger_events = trigger_events();
@@ -214,23 +232,23 @@ namespace pert
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<EventIDType> network_t<EventIDType, DurationType>::trigger_events() const
+    std::set<EventIDType> network<EventIDType, DurationType>::trigger_events() const
     {
         std::set<EventIDType> _trigger_events;
         for (auto& act: __data)
         {
-            _trigger_events.emplace(act.first.trigger_event);
+            _trigger_events.emplace(act.first.trigger_event());
         }
         return _trigger_events;
     }
 
     template<typename EventIDType, typename DurationType>
-    std::set<EventIDType> network_t<EventIDType, DurationType>::completion_events() const
+    std::set<EventIDType> network<EventIDType, DurationType>::completion_events() const
     {
         std::set<EventIDType> _completion_events;
         for (auto& act: __data)
         {
-            _completion_events.emplace(act.first.completion_event);
+            _completion_events.emplace(act.first.completion_event());
         }
         return _completion_events;
     }
@@ -238,50 +256,50 @@ namespace pert
     // SCHEDULE
 
     template<typename EventIDType, typename DurationType>
-    void network_t<EventIDType, DurationType>::schedule(const DurationType& an_initial_time, const DurationType& a_terminal_time)
+    void network<EventIDType, DurationType>::schedule(const DurationType& an_initial_time, const DurationType& a_terminal_time)
     {
         __initial_time = an_initial_time;
         __terminal_time = a_terminal_time;
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::initial_time() const
+    DurationType network<EventIDType, DurationType>::initial_time() const
     {
         return __initial_time;
     }
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::terminal_time() const
+    DurationType network<EventIDType, DurationType>::terminal_time() const
     {
         return __terminal_time;
     }
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::activity_float(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::activity_float(const network<EventIDType, DurationType>::activity& an_activity) const
     {
-        return earliest_occurence(an_activity.completion_event) - earliest_finish(an_activity);
+        return earliest_occurence(an_activity.completion_event()) - earliest_finish(an_activity);
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::free_float(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::free_float(const network<EventIDType, DurationType>::activity& an_activity) const
     {
-        return latest_occurence(an_activity.completion_event) - earliest_finish(an_activity);
+        return latest_occurence(an_activity.completion_event()) - earliest_finish(an_activity);
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::interfering_float(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::interfering_float(const network<EventIDType, DurationType>::activity& an_activity) const
     {
         return free_float(an_activity) - activity_float(an_activity);
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::independent_float(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::independent_float(const network<EventIDType, DurationType>::activity& an_activity) const
     {
-        return std::max(0, earliest_occurence(an_activity.completion_event) - latest_occurence(an_activity.trigger_event) - estimated_duration(an_activity));
+        return std::max(0, earliest_occurence(an_activity.completion_event()) - latest_occurence(an_activity.trigger_event()) - estimated_duration(an_activity));
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::earliest_occurence(const EventIDType& an_event) const
+    DurationType network<EventIDType, DurationType>::earliest_occurence(const EventIDType& an_event) const
     {
         // initial event's occurence time is given by schedule
         EventIDType _initial_event = *initial_events().begin();
@@ -289,7 +307,7 @@ namespace pert
             return __initial_time;
 
         // max earliest finish of incoming activities
-        std::set<activity_t<EventIDType>> _incoming_activities = incoming_activities(an_event);
+        std::set<network<EventIDType, DurationType>::activity> _incoming_activities = incoming_activities(an_event);
         std::list<DurationType> _earliest_finish_times;
         for (const auto& a: _incoming_activities)
         {
@@ -299,14 +317,14 @@ namespace pert
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::earliest_finish(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::earliest_finish(const network<EventIDType, DurationType>::activity& an_activity) const
     {
         // earliest occurence of trigger + estimated duration
-        return earliest_occurence(an_activity.trigger_event) + estimated_duration(an_activity);
+        return earliest_occurence(an_activity.trigger_event()) + estimated_duration(an_activity);
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::latest_occurence(const EventIDType& an_event) const
+    DurationType network<EventIDType, DurationType>::latest_occurence(const EventIDType& an_event) const
     {
         // terminal event's occurence time is given by schedule
         EventIDType _terminal_event = *terminal_events().begin();
@@ -316,7 +334,7 @@ namespace pert
          }
 
         // min latest start of outgoing activities
-        std::set<activity_t<EventIDType>> _outgoing_activities = outgoing_activities(an_event);
+        std::set<network<EventIDType, DurationType>::activity> _outgoing_activities = outgoing_activities(an_event);
         std::list<DurationType> _latest_start_times;
         for (const auto& a: _outgoing_activities)
         {
@@ -326,14 +344,14 @@ namespace pert
     };
 
     template<typename EventIDType, typename DurationType>
-    DurationType network_t<EventIDType, DurationType>::latest_start(const activity_t<EventIDType>& an_activity) const
+    DurationType network<EventIDType, DurationType>::latest_start(const network<EventIDType, DurationType>::activity& an_activity) const
     {
         // latest occurence of completion - estimated duration
-        return latest_occurence(an_activity.completion_event) - estimated_duration(an_activity);
+        return latest_occurence(an_activity.completion_event()) - estimated_duration(an_activity);
     };
 
     template<typename EventIDType, typename DurationType>
-    std::vector<std::pair<activity_t<EventIDType>, DurationType>> network_t<EventIDType, DurationType>::find_critical_path() const
+    std::vector<typename network<EventIDType, DurationType>::segment> network<EventIDType, DurationType>::find_critical_path() const
     {
         // Copy this network
         network a_network = *this;
@@ -341,7 +359,7 @@ namespace pert
         a_network.schedule(0, 1);
         a_network.schedule(0, a_network.earliest_occurence(*terminal_events().begin()));
         // Take activities with no free float
-        std::vector<std::pair<activity_t<EventIDType>, DurationType>> _critical_path;
+        std::vector<typename network<EventIDType, DurationType>::segment> _critical_path;
         std::copy_if(__data.cbegin(), __data.cend(), std::inserter(_critical_path, _critical_path.end()), [a_network](const auto& segment){ return a_network.free_float(segment.first) == 0; });
         std::sort(_critical_path.begin(), _critical_path.end(), [](const auto& s1, const auto& s2){ return s1.first < s2.first; });
         return _critical_path;
@@ -350,9 +368,9 @@ namespace pert
     // AUTOMATION
 
     template<typename EventIDType, typename DurationType>
-    network_t<EventIDType, DurationType> network_t<EventIDType, DurationType>::from_txt(const std::string& txt)
+    network<EventIDType, DurationType> network<EventIDType, DurationType>::from_txt(const std::string& txt)
     {
-        network_t<EventIDType, DurationType> txt_network;
+        network<EventIDType, DurationType> txt_network;
          
         // Split text into lines and lines into event event duration
         std::string _line;
