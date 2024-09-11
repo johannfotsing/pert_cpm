@@ -64,6 +64,8 @@ namespace pert
         // - backward pass
         duration latest_occurence(const event&) const;
         duration latest_start(const activity&) const;
+        // critical path
+        std::vector<std::pair<activity, duration>> find_critical_path() const;
         // automation
         static network from_txt(const std::string &);
         
@@ -328,6 +330,21 @@ namespace pert
     {
         // latest occurence of completion - estimated duration
         return latest_occurence(an_activity.completion_event) - estimated_duration(an_activity);
+    };
+
+    template<typename EventIDType, typename DurationType>
+    std::vector<std::pair<activity_t<EventIDType>, DurationType>> network_t<EventIDType, DurationType>::find_critical_path() const
+    {
+        // Copy this network
+        network a_network = *this;
+        // Tight schedule
+        a_network.schedule(0, 1);
+        a_network.schedule(0, a_network.earliest_occurence(*terminal_events().begin()));
+        // Take activities with no free float
+        std::vector<std::pair<activity_t<EventIDType>, DurationType>> _critical_path;
+        std::copy_if(__data.cbegin(), __data.cend(), std::inserter(_critical_path, _critical_path.end()), [a_network](const auto& segment){ return a_network.free_float(segment.first) == 0; });
+        std::sort(_critical_path.begin(), _critical_path.end(), [](const auto& s1, const auto& s2){ return s1.first < s2.first; });
+        return _critical_path;
     };
 
     // AUTOMATION

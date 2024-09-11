@@ -187,6 +187,15 @@ int test_interactive(const char* network_file)
             std::stringstream(pars) >> e_finish;
             std::cout << test_network.independent_float(network::activity(e_start, e_finish)) << std::endl;
         }
+        else if(network_command == "critical_path")
+        {
+            auto _path = test_network.find_critical_path();
+            for (const auto& segment: _path)
+            {
+                std::cout << "[" << segment.first.trigger_event << "] --=" << segment.second <<"=--> ";
+            }
+            std::cout << "[" << _path.crbegin()->first.completion_event << "]" << std::endl;
+        }
         std::cout << std::endl;
     }
     
