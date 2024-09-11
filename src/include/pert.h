@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <list>
 #include <iostream>
+#include <vector>
+#include <string>
+#include <bits/stdc++.h>
 
 namespace pert
 {
@@ -59,6 +62,8 @@ namespace pert
         // - backward pass
         duration latest_occurence(const event&) const;
         duration latest_start(const activity&) const;
+        // automation
+        static network from_txt(const std::string &);
         
     private:
         std::set<event> trigger_events() const;
@@ -296,6 +301,43 @@ namespace pert
     {
         // latest occurence of completion - estimated duration
         return latest_occurence(an_activity.completion_event) - estimated_duration(an_activity);
+    };
+
+    // AUTOMATION
+
+    template<typename EventIDType, typename DurationType>
+    network_t<EventIDType, DurationType> network_t<EventIDType, DurationType>::from_txt(const std::string& txt)
+    {
+        // Split text into lines
+        std::vector<std::string> lines;
+        std::string _token;
+        char delimiter = '\n';
+        while (std::getline(std::stringstream(txt), _token, delimiter))
+        {
+            std::cout << _token << std::endl;
+            lines.push_back(_token);
+        }
+
+        // Split lines into event event duration and add to network
+        network_t<EventIDType, DurationType> network;
+        for (const std::string& line: lines)
+        {
+            std::vector<std::string> tokens;
+            char delimiter = ' ';
+            while ((std::getline(std::stringstream(line), _token, delimiter)))
+            {
+                tokens.push_back(_token);
+            }
+
+            EventIDType s, f;
+            DurationType d;
+            std::stringstream(tokens[0]) >> s;
+            std::stringstream(tokens[1]) >> f;
+            std::stringstream(tokens[2]) >> d;
+            network.add_activity(s, f, d);
+        }
+
+        return network;
     };
 
 } // namespace pert
