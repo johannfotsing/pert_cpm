@@ -1,6 +1,6 @@
 This project is about running PERT CPM simulations.
 TODO:
-- [ ] check for loops in activity network
+- [x] check for loops in activity network
 - [ ] list available activities
 - [ ] add precedence constraints
 - [ ] add graphical user interface

@@ -154,7 +154,14 @@ namespace pert
         /// @return 
         bool is_well_formed() const
         {
-            return initial_events().size() == 1 and terminal_events().size() == 1;
+            // check ends
+            if (initial_events().size() != 1 or terminal_events().size() != 1)
+                return false;
+            
+            // check loops
+            const event initial_event = *initial_events().begin();
+            const event terminal_event = *terminal_events().begin();
+            return loop_paths(initial_event, terminal_event).empty();
         };
 
         /// @brief 
@@ -342,7 +349,7 @@ namespace pert
             return paths(path({}), a_start_event, a_finish_event);
         }
 
-        std::vector<path> paths(const path a_partial_path, const event& a_start_event, const event& a_finish_event)
+        std::vector<path> paths(const path a_partial_path, const event& a_start_event, const event& a_finish_event) const
         {
             std::vector<path> _paths;
 
@@ -361,7 +368,7 @@ namespace pert
                         break;
                     }
                 }
-                if (next_segment_creates_loop) 
+                if (next_segment_creates_loop)
                 {
                     continue;
                 }
@@ -380,6 +387,50 @@ namespace pert
                 next_partial_path.push_back(next_segment);
                 std::vector<path> paths_through = paths(next_partial_path, next_segment.first.completion_event(), a_finish_event);
                 for (const auto& p: paths_through)
+                {
+                    _paths.push_back(p);
+                }
+            }
+
+            return _paths;
+        };
+
+        std::vector<path> loop_paths(const event& a_start_event, const event& a_finish_event) const
+        {
+            return loop_paths(path({}), a_start_event, a_finish_event);
+        }
+
+        std::vector<path> loop_paths(const path& a_partial_path, const event& a_start_event, const event& a_finish_event) const
+        {
+            std::vector<path> _paths;
+
+            for (const auto& a: outgoing_activities(a_start_event))
+            {
+                segment next_segment = std::make_pair(a, estimated_duration(a));
+                
+                // next segment creates loop
+                for (const auto& s: a_partial_path)
+                {
+                    if (next_segment.first.completion_event() == s.first.trigger_event())
+                    {
+                        path loop_path { a_partial_path };
+                        loop_path.push_back(next_segment);
+                        _paths.push_back(loop_path);
+                        return _paths;
+                    }
+                }
+
+                // next segment leads to finish event
+                if (next_segment.first.completion_event() == a_finish_event)
+                {
+                    return _paths;
+                }
+
+                // next segment stacks on the partial path
+                path next_partial_path { a_partial_path };
+                next_partial_path.push_back(next_segment);
+                std::vector<path> loop_paths_through = loop_paths(next_partial_path, next_segment.first.completion_event(), a_finish_event);
+                for (const auto& p: loop_paths_through)
                 {
                     _paths.push_back(p);
                 }

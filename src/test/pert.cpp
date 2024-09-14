@@ -111,6 +111,45 @@ int test_interactive(const char* network_file)
 
     show_network(test_network);
 
+    if (!test_network.is_well_formed())
+    {
+        std::map<Network::event, std::vector<Network::path>> loops_map;
+        for (const auto& a: test_network.activities())
+        {
+            auto loop_paths = test_network.loop_paths(a.trigger_event(), a.trigger_event());
+            auto search = loops_map.find(a.trigger_event());
+            if (search != loops_map.end())
+            {
+                continue;
+            }
+            if (!loop_paths.empty())
+            {
+                loops_map.insert({a.trigger_event(), loop_paths});
+            }
+        }
+
+        if (!loops_map.empty())
+        {
+            std::cout << "(*) Loops:\n----------" << std::endl;
+        }
+
+        for (const auto& lm_entry: loops_map)
+        {
+            std::cout << std::endl;
+            std::cout << "(" << lm_entry.first << " *** " << lm_entry.first << ")" << ": " << std::endl;
+            for (const auto& lp: lm_entry.second)
+            {
+                std::cout << "  ";
+                for (const auto& s: lp)
+                {
+                    std::cout << "[" << s.first.trigger_event() << "]" << " --=" << s.second << "=--> ";
+                }
+                std::cout << "[" << lp.rbegin()->first.completion_event() << "]" << std::endl;
+            }
+        }
+        return 0;
+    }
+
     // Interactive loop
     std::string network_command, pars;
     while (network_command != "q")
