@@ -356,7 +356,7 @@ namespace pert
                 {
                     if (next_segment.first.completion_event() == s.first.trigger_event())
                     {
-                        std::cout << next_segment.first.completion_event() << "==" << s.first.trigger_event() << std::endl;
+                        //std::cout << next_segment.first.completion_event() << "==" << s.first.trigger_event() << std::endl;
                         next_segment_creates_loop = true;
                         break;
                     }
