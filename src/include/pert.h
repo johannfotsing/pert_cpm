@@ -424,14 +424,14 @@ namespace pert
         
     };
 
-    template<typename event, typename DurationType>
-    bool operator<(const typename network<event, DurationType>::activity& a1, const typename network<event, DurationType>::activity& a2)
+    template<typename EventIDType, typename DurationType>
+    bool operator<(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
         return a1 < a2;
     }
 
-    template<typename event, typename DurationType>
-    bool operator==(const typename network<event, DurationType>::activity& a1, const typename network<event, DurationType>::activity& a2)
+    template<typename EventIDType, typename DurationType>
+    bool operator==(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
         return a1 == a2;
     }
