@@ -200,6 +200,32 @@ int test_interactive(const char* network_file)
             }
             std::cout << "[" << _path.crbegin()->first.completion_event() << "]" << std::endl;
         }
+        else if(network_command == "paths")
+        {
+            Network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            test_network.paths(e_start, e_finish);
+            for (const Network::path p: test_network.paths(e_start, e_finish))
+            {
+                for (const Network::segment& s: p)
+                {
+                    std::cout << "[" << s.first.trigger_event() << "] --=" << s.second <<"=--> ";
+                }
+                std::cout << "[" << p.crbegin()->first.completion_event() << "]" << std::endl;
+            }
+        }
+        else if(network_command == "subnet")
+        {
+            Network::event e_start, e_finish;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_start;
+            std::cin >> pars;
+            std::stringstream(pars) >> e_finish;
+            show_network(test_network.subnet(e_start, e_finish));
+        }
         std::cout << std::endl;
     }
     
