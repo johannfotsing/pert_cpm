@@ -6,4 +6,5 @@ TODO:
 - [ ] add graphical user interface
     canva with activities dropped randomly, then connected by clicks.
     events are automatically generated
+- [ ] write in-code documentation
 - [ ] configure for ctest with cmake
