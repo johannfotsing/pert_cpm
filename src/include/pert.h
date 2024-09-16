@@ -58,6 +58,8 @@ namespace pert
 
         /// @brief 
         using segment = std::pair<activity, duration>;
+        using path = std::vector<segment>;
+        // TODO: find a way to guarantee that a path is correctly ordered
 
         /// @brief 
         struct schedule
@@ -152,7 +154,14 @@ namespace pert
         /// @return 
         bool is_well_formed() const
         {
-            return initial_events().size() == 1 and terminal_events().size() == 1;
+            // check ends
+            if (initial_events().size() != 1 or terminal_events().size() != 1)
+                return false;
+            
+            // check loops
+            const event initial_event = *initial_events().begin();
+            const event terminal_event = *terminal_events().begin();
+            return loop_paths(initial_event, terminal_event).empty();
         };
 
         /// @brief 
@@ -327,7 +336,147 @@ namespace pert
             std::sort(_critical_path.begin(), _critical_path.end(), [](const auto& s1, const auto& s2){ return s1.first < s2.first; });
             return _critical_path;
         };
+
+        static std::string to_str(const segment& s)
+        {
+            std::stringstream str_stream; 
+            str_stream << "[" << s.first.trigger_event() << "]" << " --=" << s.second << "=--> " << "[" << s.first.completion_event() << "]";
+            return str_stream.str();
+        }
+
+        std::vector<path> paths(const event& a_start_event, const event& a_finish_event)
+        {
+            return paths(path({}), a_start_event, a_finish_event);
+        }
+
+        std::vector<path> paths(const path a_partial_path, const event& a_start_event, const event& a_finish_event) const
+        {
+            std::vector<path> _paths;
+
+            for (const auto& a: outgoing_activities(a_start_event))
+            {
+                segment next_segment = std::make_pair(a, estimated_duration(a));
+                
+                // next segment creates loop
+                bool next_segment_creates_loop = false;
+                for (const auto& s: a_partial_path)
+                {
+                    if (next_segment.first.completion_event() == s.first.trigger_event())
+                    {
+                        //std::cout << next_segment.first.completion_event() << "==" << s.first.trigger_event() << std::endl;
+                        next_segment_creates_loop = true;
+                        break;
+                    }
+                }
+                if (next_segment_creates_loop)
+                {
+                    continue;
+                }
+
+                // next segment leads to finish event
+                if (next_segment.first.completion_event() == a_finish_event)
+                {
+                    path complete_path { a_partial_path };
+                    complete_path.push_back(next_segment);
+                    _paths.push_back(complete_path);
+                    return _paths;
+                }
+
+                // next segment stacks on the partial path
+                path next_partial_path { a_partial_path };
+                next_partial_path.push_back(next_segment);
+                std::vector<path> paths_through = paths(next_partial_path, next_segment.first.completion_event(), a_finish_event);
+                for (const auto& p: paths_through)
+                {
+                    _paths.push_back(p);
+                }
+            }
+
+            return _paths;
+        };
+
+        std::vector<path> loop_paths(const event& a_start_event, const event& a_finish_event) const
+        {
+            return loop_paths(path({}), a_start_event, a_finish_event);
+        }
+
+        std::vector<path> loop_paths(const path& a_partial_path, const event& a_start_event, const event& a_finish_event) const
+        {
+            std::vector<path> _paths;
+
+            for (const auto& a: outgoing_activities(a_start_event))
+            {
+                segment next_segment = std::make_pair(a, estimated_duration(a));
+                
+                // next segment creates loop
+                for (const auto& s: a_partial_path)
+                {
+                    if (next_segment.first.completion_event() == s.first.trigger_event())
+                    {
+                        path loop_path { a_partial_path };
+                        loop_path.push_back(next_segment);
+                        _paths.push_back(loop_path);
+                        return _paths;
+                    }
+                }
+
+                // next segment leads to finish event
+                if (next_segment.first.completion_event() == a_finish_event)
+                {
+                    return _paths;
+                }
+
+                // next segment stacks on the partial path
+                path next_partial_path { a_partial_path };
+                next_partial_path.push_back(next_segment);
+                std::vector<path> loop_paths_through = loop_paths(next_partial_path, next_segment.first.completion_event(), a_finish_event);
+                for (const auto& p: loop_paths_through)
+                {
+                    _paths.push_back(p);
+                }
+            }
+
+            return _paths;
+        };
+
+
+        // Constructors
+
+        network() : __data({}) {};
+
+        /// @brief 
+        /// @param some_paths 
+        network(const std::vector<path>& some_paths)
+        {
+            network _n;
+            for (const path& p: some_paths)
+            {
+                for (const segment& s: p)
+                {
+                    _n.add_activity(s.first, s.second);
+                }
+            }
+        };
+
+        /// @brief 
+        /// @param some_paths 
+        /// @param a_start_time 
+        /// @param a_finish_time 
+        network(const std::vector<path>& some_paths, const duration& a_start_time, const duration& a_finish_time) : network(some_paths) 
+        {
+            __initial_time = a_start_time;
+            __terminal_time = a_finish_time;
+        };
         
+        /// @brief 
+        /// @param a_start_event 
+        /// @param a_finish_event 
+        /// @return 
+        network subnet(const event& a_start_event, const event& a_finish_event)
+        {
+            return network(paths(a_start_event, a_finish_event), earliest_occurence(a_start_event), latest_occurence(a_finish_event));
+        }
+
         // automation
         
         /// @brief 
@@ -424,14 +573,14 @@ namespace pert
         
     };
 
-    template<typename event, typename DurationType>
-    bool operator<(const typename network<event, DurationType>::activity& a1, const typename network<event, DurationType>::activity& a2)
+    template<typename EventIDType, typename DurationType>
+    bool operator<(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
         return a1 < a2;
     }
 
-    template<typename event, typename DurationType>
-    bool operator==(const typename network<event, DurationType>::activity& a1, const typename network<event, DurationType>::activity& a2)
+    template<typename EventIDType, typename DurationType>
+    bool operator==(const typename network<EventIDType, DurationType>::activity& a1, const typename network<EventIDType, DurationType>::activity& a2)
     {
         return a1 == a2;
     }
